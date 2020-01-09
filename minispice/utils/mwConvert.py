@@ -267,19 +267,10 @@ def shuntC(b,f,z0=50.):
     w = 2*math.pi*f
     return b/(w*z0)
 
-
-
-
 # A test program
 def main():
     z = np.array([[1,2],[3,4]],dtype='complex')
-    print htoz(ytoh(ttoy(htot(ytoh(stoy(rtos(stor(ztos(z)))))))))
+    print(htoz(ytoh(ttoy(htot(ytoh(stoy(rtos(stor(ztos(z))))))))))
 
-
-
-
-
-
-    
 if __name__=="__main__": 
     main()
