@@ -35,10 +35,11 @@ from minispice.Converter import *
 
 # We would like to match our intrinsic transistor at 10GHz for maximum gain. 
 # The system impedance is 50Ohm. First we need to extract the yparamters
-data = freqAnalysis.fromFile("./intrinsic.cir", [1e10])
+analysis = freqAnalysis.fromFile("./intrinsic.cir", [1e10])
 
 # Extract the data and compress to twoport
-sparams = ytos( data.ygroup[0].toTwoport(1,6) )
+ymatrix = analysis.getMatrix( freq = 1e10 )
+sparams = ytos( ymatrix.toTwoport(1,6) )
 
 # Pass parameters and call the analysis
 active  = activeAnalysis(sparams)

@@ -31,8 +31,19 @@ import numpy as np
 from minispice.freqAnalysis import freqAnalysis
 
 # Create a list of frequencies to solve
-freqList = np.logspace(1,12,1000)
+freqList = np.logspace(1,12,100)
 
 # Import spice file and run anlaysis
-data = freqAnalysis.fromFile('./cascode.cir', freqList)
-handle = data.plotGain(1,7,"dB")
+data = freqAnalysis.fromFile('./cascodeAmp.cir', freqList)
+
+# Plot voltage gain (dB)
+if True:
+	data.plotGain(1,7,"dB")
+
+# Calculate input impedance Rl = 50
+if True: 
+	data.plotInputImpedance(1, 7, 50., "log")	
+
+# Calculate output impedance Rs = 50
+if True:
+	data.plotOutputImpedance(1, 7, 50., "log")

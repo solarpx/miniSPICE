@@ -26,6 +26,7 @@
 
 # Classes for array manipulation
 import numpy as np
+import collections
 import math
 import copy
 import re
@@ -41,94 +42,132 @@ from .Converter import *
 class freqAnalysis: 
 	
 	# Method to initialize directly
-	def __init__(self, ygroup, freqList):
-		self.ygroup = ygroup
-		self.freqList = freqList
+	def __init__(self, data, freq, components):
 
+		# Data is dict of admittance matrices
+		self.data = data
+
+		# List of frequencies to simulate
+		self.freq = freq
+		
+		# Dictionary to hold components
+		self.components = components
+	
 	# Overload constructor via @classmethod	
 	@classmethod
-	def fromFile(cls, path, freqList):
+	def fromFile(cls, path, freq):
 	
-		# Read all components into data		
-		with open(path, 'r') as f:
-			data = [line.split() for line in f]
+		# Read all components into dict
+		components = {}
 
-		# Get size of ymatrix from file
+		# While parsing, we will determine the size of admittace matrix
 		size = 0
-		for j,lst in enumerate(data):
-			
-			# Case of Transitor in data file
-			if len(lst) > 4:
-				if size < int(lst[1]):
-					size = int(lst[1])
-				if size < int(lst[2]):
-					size = int(lst[2])
-				if size < int(lst[3]):
-					size = int(lst[3])
 
-			# Case of Passives in data file
-			else:
-				if size < int(lst[1]):
-					size = int(lst[1])
-				if size < int(lst[2]):
-					size = int(lst[2])
+		with open(path, 'r') as f:
+		
+			for _line in f:
 
-		ygroup = []
-		for i, freq in enumerate(freqList):
+				# Split component data
+				_comp = _line.split()
 
-			tmp = nodeMatrix(size,freq)
-			for j, lst in enumerate(data): 
+				# Extract nodes from list
+				_nodes = [ int(n) for n in _comp[1:len(_comp)-1] ]
+
+				# Augment size if necessary
+				if max(_nodes) > size:
+					size = max(_nodes)
+
+				# Parse data into dictionary 
+				try:
+					components[ _comp[0] ] = {"nodes" : _nodes, "value" : float(_comp[-1]) }
+
+				except:
+					components[ _comp[0] ] = {"nodes" : _nodes, "value" : str(_comp[-1]) }
+
+		# Create a dictionary for admittance matrices
+		data = collections.OrderedDict()
 				
-				# Exclude header lines
-				if re.match(r'#!',str(lst[0])) is not None: 
-					pass 
+		# Loop through frequencies and initialize components
+		for f in freq:
 
-				# Otherwise loop through devices
+			# Initialize node matrix for frequency f
+			ymatrix = nodeMatrix(size, f)
+		
+			# Loop through components and add them in
+			for _comp, _conf in components.items():
+
+				# Passive components
+				if re.match(r'R|C|L', _comp) is not None:
+	
+					ymatrix.addPassive(
+						_comp, 
+						_conf["nodes"][0], 
+						_conf["nodes"][1], 
+						_conf["value"]
+					)
+
+				# Transistor with model file
+				elif re.match(r'Q', _comp) is not None: 
+					
+					ymatrix.addTransistor(
+						_comp, 
+						_conf["nodes"][0], 
+						_conf["nodes"][1], 
+						_conf["nodes"][2], 
+						_conf["value"]
+					)
+
+				# Case of a VCCS (transconductance)			
+				elif re.match(r'G', _comp) is not None:
+					
+					ymatrix.addVCCS(
+						_comp, 
+						_conf["nodes"][0], 
+						_conf["nodes"][1], 
+						_conf["nodes"][2], 
+						_conf["nodes"][3], 
+						_conf["value"]
+					)
+
+				# Pass 
 				else:
+					pass
 
-					# Case of passives
-					if re.match(r'R|C|L',str(lst[0])) is not None:
-						tmp.addPassive(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]))
-		
-					# Case of transistor
-					elif re.match(r'Q', str(lst[0])) is not None: 
-						tmp.addTransistor(str(lst[0]), int(lst[1]), int(lst[2]), int(lst[3]), str(lst[4]))
-
-					# Case of a VCCS (transconductance)			
-					elif re.match(r'G',str(lst[0])) is not None:
-						tmp.addVCCS(str(lst[0]), int(lst[1]), int(lst[2]), int(lst[3]), int(lst[4]), float(lst[5]) )
-
-					else:
-						pass
-
-			ygroup.append(tmp)
+			# Assign data 
+			data[f] = ymatrix
 			
-		return cls(ygroup, freqList)
+		return cls(data, freq, components)
 
-	def plotGain(self,n1,n2, arg=None):
+	# Return a single matrix from simulation
+	def getMatrix(self, freq ):
+		return self.data[ freq ] if freq in self.data.keys() else None
+
+
+	# Method to plot gain between two nodes
+	def plotGain(self, n1, n2, arg=None):
 		
-		# Obtain nodal gain for each object in y-group
-		gain, phase = [],[]
-		for i,ymatrix in enumerate(self.ygroup):
-			gain.append(np.abs(self.ygroup[i].voltageGain(n1,n2)))
-			phase.append(np.angle(self.ygroup[i].voltageGain(n1,n2),deg=True))
+		# Obtain nodal gain for each frequency
+		gain = [ np.abs( self.data[f].voltageGain(n1,n2) ) for f, ymatrix in self.data.items() ]
+
+		# Obtain phase shift for each frequency
+		phase = [ np.angle( self.data[f].voltageGain(n1,n2), deg = True ) for f, ymatrix in self.data.items() ]
 
 		# Long ugly plotting methods
 		if arg=="lin":
 			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
 			plt.figure(1)
 			plt.title(titleStr)
-			plt.plot(self.freqList,gain)
+			plt.plot(self.freq, gain)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.ylabel("Voltage Gain")
 			
 			titleStr="vp("+str(n2)+")"
 			plt.figure(2)
-			plt.plot(self.freqList, phase)
+			plt.plot(self.freq, phase)
 			plt.title(titleStr)
 			plt.xlabel("Frequency")
-			plt.ylabel("Voltage Phase Difference")
+			plt.ylabel("Phase (deg)")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.show()
 
@@ -136,17 +175,17 @@ class freqAnalysis:
 			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
 			plt.figure(1)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList, gain)
+			plt.semilogx(self.freq, gain)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.ylabel("Voltage Gain")
 			
 			titleStr="vp("+str(n2)+")"
 			plt.figure(2)
-			plt.semilogx(self.freqList, phase)
+			plt.semilogx(self.freq, phase)
 			plt.title(titleStr)
 			plt.xlabel("Frequency")
-			plt.ylabel("Voltage Phase Difference")
+			plt.ylabel("Phase (deg)")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.show()
 
@@ -154,108 +193,126 @@ class freqAnalysis:
 			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
 			plt.figure(1)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList, [todB(_) for _ in gain])
+			plt.semilogx(self.freq, [todB(_) for _ in gain])
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Voltage Gain")
+			plt.ylabel("Voltage Gain (dB)")
 			
 			titleStr="vp("+str(n2)+")"
 			plt.figure(2)
-			plt.semilogx(self.freqList, phase)
+			plt.semilogx(self.freq, phase)
 			plt.title(titleStr)
 			plt.xlabel("Frequency")
-			plt.ylabel("Voltage Phase Difference")
+			plt.ylabel("Phase (deg)")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.show()
 
 
-	def inputImpedance(self,n1,n2,rl,arg):
-		zMag,zPhase = [],[]
-		g  = lambda r : complex(1/r) 
-		for i,ymatrix in enumerate(self.ygroup):
-			twoport=ymatrix.toTwoport(n1,n2)
-			tmp = (np.linalg.det(twoport)+twoport[0,0])/(twoport[1,1]+g(rl))
-			zMag.append(np.abs(1/tmp))
-			zPhase.append(np.angle((1/tmp),deg=True))
+	# Method to plot input impedance for a given load impedance (rl = 50 Ohm)
+	def plotInputImpedance(self,n1,n2,rl,arg):
+		
+		g  = lambda r : complex(1/r)
+		zMag, zPhase = [], []
+		 
+		# Calculate input impedance
+		for f, ymatrix in self.data.items():
+			
+			twoport = ymatrix.toTwoport(n1,n2)
+			delta = np.linalg.det(twoport)
+			tmp = ( twoport[1,1] + g(rl) )/( delta + (twoport[0,0]*g(rl)) )
+
+			# Append data to array	
+			zMag.append( np.abs(tmp) )
+			zPhase.append( np.angle(tmp, deg=True) )
 		
 		# Long ugly plotting methods			
 		if arg=="lin":
 			titleStr="mag(Zin)"
 			plt.figure(1)
 			plt.title(titleStr)
-			plt.plot(self.freqList, zMag)
+			plt.plot(self.freq, zMag)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Input Impedance Magnitude")
+			plt.ylabel("|Zin|")
 			
 			titleStr="phase(Zin)"
 			plt.figure(2)
 			plt.title(titleStr)
-			plt.plot(self.freqList, zPhase)
+			plt.plot(self.freq, zPhase)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Input Impedance Phase")
+			plt.ylabel("<Zin (deg)")
 			plt.show()
+
 
 		if arg=="log":
 			titleStr="mag(Zin)"
 			plt.figure(1)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList, zMag)
+			plt.semilogx(self.freq, zMag)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Input Impedance Magnitude")
+			plt.ylabel("|Zin|")
 			
 			titleStr="phase(Zin)"
 			plt.figure(2)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList,zPhase)
+			plt.semilogx(self.freq,zPhase)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Input Impedance Phase")
+			plt.ylabel("<Zin (deg)")
 			plt.show()	
 
-	def outputImpedance(self,n1,n2,rs,arg):
-		zMag,zPhase = [],[]
-		g  = lambda r : complex(1/r) 
-		for i,ymatrix in enumerate(self.ygroup):
-			twoport=ymatrix.toTwoport(n1,n2)
-			tmp = (np.linalg.det(twoport)+twoport[1,1])/(twoport[0,0]+g(rs))
-			zMag.append(np.abs(1/tmp))
-			zPhase.append(np.angle((1/tmp),deg=True))
+
+	# Method to plot output impedance for a given source impedance (rs = 50 Ohm)
+	def plotOutputImpedance(self, n1, n2, rs, arg):
+
+		g  = lambda r : complex(1/r)
+		zMag, zPhase = [], []
+		 
+		# Calculate output impedance
+		for f, ymatrix in self.data.items():
+			
+			twoport = ymatrix.toTwoport(n1, n2)
+			delta = np.linalg.det(twoport)
+			tmp = ( twoport[0,0] + g(rs) )/( delta + (twoport[1,1]*g(rs)) ) 
+
+			# Append data to array	
+			zMag.append( np.abs( tmp ) )
+			zPhase.append( np.angle(tmp, deg=True) )
 		   
 		# Long ugly plotting methods
 		if arg=="lin":
 			titleStr="mag(Zout)"
 			plt.figure(3)
 			plt.title(titleStr)
-			plt.plot(self.freqList,zMag)
+			plt.plot(self.freq, zMag)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Output Impedance Magnitude")
+			plt.ylabel("|Zout|")
 			
 			titleStr="phase(Zout)"
 			plt.figure(4)
 			plt.title(titleStr)
-			plt.plot(self.freqList,zPhase)
+			plt.plot(self.freq, zPhase)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Output Impedance Phase")
+			plt.ylabel("<Zout (deg)")
 
 		if arg=="log":
 			titleStr="mag(Zout)"
 			plt.figure(3)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList,zMag)
+			plt.semilogx(self.freq, zMag)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Output Impedance Magnitude")
+			plt.ylabel("|Zout|")
 			
 			titleStr="phase(Zout)"
 			plt.figure(4)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList,zPhase)
+			plt.semilogx(self.freq, zPhase)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Output Impedance Phase")
+			plt.ylabel("<Zout (deg)")
 			plt.show()
