@@ -1,10 +1,11 @@
 
 
-
+#!/usr/bin/env python 
 from .Converter import *
 import numpy as np
 
-
+# This is a container class which contained important equations for calculating
+# stability and gain data from transistor S-parameters.
 class activeAnalysis:
 
 	# Stability is calculated 
@@ -45,29 +46,16 @@ class activeAnalysis:
 		# Calculate maximum gain in case of stable device
 		if ( self.K > 1.0 ):
 			
-			# Maximum transducer gain
-			Gmx = ( abs(self.s21)/abs(self.s12) ) * ( self.K - math.sqrt(self.K**2 -1) )
-			Gmxdb = todB(Gmx)
-
-			# Normalized transducer gain
-			gmx = Gmx / abs(self.s21 * self.s21.conj())
-		
-			print("\nMaximum Gain (Device Stable)")
-			print("\tGmx = %f = %f dB : gmx = %f"%(Gmx, Gmxdb, gmx))
+			Gain = self.maxTransducerGain()
+			print("\nMaximum Transducer Gain (Device Stable)")
+			print("\tGmx = %f = %f dB : gmx = %f"%(Gain["Gmx"], Gain["Gmx_dB"], Gain["gmx"]) )
 
 		# Calculate maximum gain in case of unstable device
 		else:	
 
-			# Maximum available gain
-			Gmx = ( abs(self.s21)/abs(self.s12) )
-			Gmxdb = todB(Gmx)			
-
-			# Normalized maximum available gain
-			gmx = Gmx / abs(self.s21 * self.s21.conj())
-			
-			print("\nMaximum Gain (Device Unstable)")
-			print("\tGmx = %f = %f dB : gmx = %f"%(Gmx, Gmxdb, gmx))
-
+			Gain = self.maxAvailableGain()
+			print("\nMaximum Available Gain (Device Unstable)")
+			print("\tGmx = %f = %f dB : gmx = %f"%(Gain["Gmx"], Gain["Gmx_dB"], Gain["gmx"]) )
 
 		# Stability circle data
 		print("\nInput Stability Circle")
@@ -118,18 +106,50 @@ class activeAnalysis:
 		# Return data
 		return {"c" : cl, "r" : rl, "data" : self.Circle(cl, rl)}
 
-	# Gain circles
-	def GainCircle(self, gp):
+	# Constant gain circles for specified gain in dB
+	def constantGainCircle(self, Gp_dB):
+
+		# Calculate normalized scalar gain
+		Gp = fromDb(Gp_dB)
+		gp = Gp/( abs(self.s21)**2 )
 
 		# Center
-		cpa = gp*(s22-D*s11.conj()).conj()
-		cpb = 1+gp*(abs(s22)**2 - abs(D)**2)
-		cg  = _cpa/_cpb
+		cpa = gp * ( self.s22 - self.D*self.s11.conj() ).conj()
+		cpb = 1 + gp * ( abs(self.s22)**2 - abs(self.D)**2 )
+		cg  = cpa/cpb
 	    
 		# Radius
-		rpa = math.sqrt(1 - (2*K*gp*abs(s12*s21)) + (gp*abs(s12*s21))**2)
-		rpb = abs(1 + gp*(abs(s22)**2 - abs(D)**2))
+		rpa = math.sqrt( 1 - (2 * self.K * gp * abs(self.s12 * self.s21) ) + (gp * abs(self.s12 * self.s21))**2 )
+		rpb = abs(1 + gp * (abs(self.s22)**2 - abs(self.D)**2) )
 		rg  = rpa/rpb
 
 		# Return data
-		return {"c" : cg, "r" : rg, "data" : self.CSircle(cl, rl)}
+		return {"c" : cg, "r" : rg, "data" : self.Circle(cg, rg)}
+
+	# Maximum transducer gain
+	def maxTransducerGain(self):
+
+		# Maximum transducer gain
+		Gmx = ( abs(self.s21)/abs(self.s12) ) * ( self.K - math.sqrt(self.K**2 -1) )
+		Gmx_dB = todB(Gmx)
+
+		# Normalized transducer gain
+		gmx = Gmx / abs(self.s21 * self.s21.conj())
+		
+		return {"Gmx" : Gmx, "Gmx_dB" : Gmx_dB, "gmx" : gmx}
+
+	# Maximum available gain
+	def maxAvailableGain(self):
+
+		# Maximum available gain
+		Gmx = ( abs(self.s21)/abs(self.s12) )
+		Gmx_dB = todB(Gmx)			
+
+		# Normalized maximum available gain
+		gmx = Gmx / abs(self.s21 * self.s21.conj())
+
+		return {"Gmx" : Gmx, "Gmx_dB" : Gmx_dB, "gmx" : gmx}
+
+	# Method to calculate source conjugate 
+	def conjugateCircleData(self, data):
+		return [ ( self.s11 + (self.s12 * self.s21 * _)/(1- (self.s22 * _)) ).conj() for _ in data ]

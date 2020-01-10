@@ -234,7 +234,6 @@ def rtos(r):
     else:
         return None
 
-
 # Z to Gamma and Gamma to Z
 def gammatoz(gamma,z0=50.0):
     return complex(z0*(1.0+complex(gamma))/(1.0-complex(gamma)))
@@ -278,9 +277,13 @@ def phasor(c, _type="rad"):
     if _type == "deg":
         return ( abs(c), np.angle(c)*180./math.pi )
 
-# Scalar to dB
+# scalar to dB
 def todB(val):
     return 10*np.log10(val)
+
+# dB to scalar
+def fromDb(val):
+    return np.power(10.0, val/10.)
 
 # A test program
 if __name__=="__main__":
