@@ -267,10 +267,22 @@ def shuntC(b,f,z0=50.):
     w = 2*math.pi*f
     return b/(w*z0)
 
+# Convert complex number to phasor
+def phasor(c, _type="rad"):    
+
+    # Radians
+    if _type == "rad":
+        return ( abs(c), np.angle(c) )
+
+    # Degrees
+    if _type == "deg":
+        return ( abs(c), np.angle(c)*180./math.pi )
+
+# Scalar to dB
+def todB(val):
+    return 10*np.log10(val)
+
 # A test program
-def main():
+if __name__=="__main__":
     z = np.array([[1,2],[3,4]],dtype='complex')
     print(htoz(ytoh(ttoy(htot(ytoh(stoy(rtos(stor(ztos(z))))))))))
-
-if __name__=="__main__": 
-    main()

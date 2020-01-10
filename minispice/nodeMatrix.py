@@ -72,6 +72,33 @@ class nodeMatrix:
 				self.ymatrix[n2,n2] += bl(value)
 
 	
+	# Transconductances
+	def addVCCS(self,name,n1,n2,n3,n4,value):
+	
+		#3,0,2,0
+		value = complex(value,0)
+
+		if re.match(r'G\d*',name) is not None:
+	
+			# Case of a twoport
+			if n2 == 0 and n4 == 0:
+
+				n1-=1
+				n3-=1
+				self.ymatrix[n1,n3] += value
+	
+			# General case
+			else:
+				n1-=1
+				n2-=1
+				n3-=1
+				n4-=1
+				self.ymatrix[n2,n3]-=value
+				self.ymatrix[n1,n3]+=value
+				self.ymatrix[n1,n4]-=value
+				self.ymatrix[n2,n4]+=value
+	
+
 	# Method for adding a transistor
 	def addTransistor(self,name, nb, nc, ne, model): 
 		
@@ -317,14 +344,6 @@ class nodeMatrix:
 #params = {'b': 5, 'rbe': 1}
 #y = nodeMatrix(size,freq)
 #y.addTransistor("Q",1,3,2,"simple")
-
-####################################################
-# For Frequency Analysis: Initialization from File #
-####################################################
-#freqList = np.linspace(.1, 2, 200)
-#path='/home/thoth/Desktop/python/minispice/circuits/piWithC.cir'
-#data = frequencyAnalysis.fromFile(path, freqList)
-#data.plotGain(1,2)
 
 
 ####################################################################

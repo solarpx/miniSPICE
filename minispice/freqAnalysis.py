@@ -19,8 +19,8 @@ class freqAnalysis:
 		self.ygroup = ygroup
 		self.freqList = freqList
 
-
-	@classmethod	
+	# Overload constructor via @classmethod	
+	@classmethod
 	def fromFile(cls, path, freqList):
 	
 		# Read all components into data		
@@ -49,14 +49,31 @@ class freqAnalysis:
 
 		ygroup = []
 		for i, freq in enumerate(freqList):
+
 			tmp = nodeMatrix(size,freq)
 			for j, lst in enumerate(data): 
-				# Case of passives
-				if re.match(r'R|C|L',str(lst[0])) is not None:
-					tmp.addPassive(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]))
-				# Case of transistor
-				if re.match(r'Q', str(lst[0])) is not None: 
-					tmp.addTransistor(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]), str(lst[4]))
+				
+				# Exclude header lines
+				if re.match(r'#!',str(lst[0])) is not None: 
+					pass 
+
+				# Otherwise loop through devices
+				else:
+
+					# Case of passives
+					if re.match(r'R|C|L',str(lst[0])) is not None:
+						tmp.addPassive(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]))
+		
+					# Case of a VCCS (transconductance)			
+					elif re.match(r'G',str(lst[0])) is not None:
+						tmp.addVCCS(str(lst[0]), int(lst[1]), int(lst[2]), int(lst[3]), int(lst[4]), float(lst[5]) )
+
+					# Case of transistor
+					elif re.match(r'Q', str(lst[0])) is not None: 
+						tmp.addTransistor(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]), str(lst[4]))
+
+					else:
+						pass
 
 			ygroup.append(tmp)
 			
