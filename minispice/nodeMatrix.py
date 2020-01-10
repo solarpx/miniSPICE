@@ -1,3 +1,29 @@
+# ---------------------------------------------------------------------------------
+# 	minispice-> nodeMatrix.py
+#	Copyright (C) 2019 Michael Winters
+#	github: https://github.com/mesoic
+#	email:  mesoic@protonmail.com
+# ---------------------------------------------------------------------------------
+#	
+#	Permission is hereby granted, free of charge, to any person obtaining a copy
+#	of this software and associated documentation files (the "Software"), to deal
+#	in the Software without restriction, including without limitation the rights
+#	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#	copies of the Software, and to permit persons to whom the Software is
+#	furnished to do so, subject to the following conditions:
+#	
+#	The above copyright notice and this permission notice shall be included in all
+#	copies or substantial portions of the Software.
+#	
+#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#	SOFTWARE.
+#
+
 # Classes for array manipulation
 import numpy as np
 import math
@@ -5,14 +31,16 @@ import copy
 import re
 import os
 
-
 # Node admittace matrix class
 class nodeMatrix: 
 
-	def __init__(self,size,freq): 
+	def __init__(self, size, freq): 
 		self.ymatrix = np.zeros(shape=(size,size),dtype=complex)
 		self.freq = float(freq)
 		self.size = size
+
+	def showMatrix(self):
+		print(self.ymatrix)
 
 	def addPassive(self,name,n1,n2,value):
 		# Convert to float automatically
@@ -155,7 +183,7 @@ class nodeMatrix:
 
 		#Transistor with base spreading resistance
 		g  = lambda r : complex(1/r) 
-		bc = lambda c : complex(0,2*math.pi*self.freq*c) 
+		bc = lambda c : complex(0,2*math.pi*self.freq*c)
 		if model == 'hybridpix':
 			# Extract transistor parameters out of params dict			
 			params = self.getModel('hybridpix')
@@ -192,11 +220,14 @@ class nodeMatrix:
 	# Method to extract params from a *.model file 
 	def getModel(self,name):
 		params = {}
-		path=os.getcwd()+'/model/'+name+'.model'
+		path = os.getcwd()+ os.path.sep + name + '.model'
+		
 		with open(path, 'r') as f:
 			data = [line.split() for line in f]
+		
 		for i,lst in enumerate(data):
 			params[str(lst[0])] = float(lst[1])
+		
 		return params
 
 	# Method to calculate cofactors Dij
@@ -278,6 +309,9 @@ class nodeMatrix:
 		#The voltage gain is given by the ratio of cofactors
 		return self.cofactorN(n1,n2)/self.cofactorN(n1,n1)
 
+	def transferFunction(self,n1,n2):
+		tp = self.toTwoport(n1,n2)
+		return tp[1,0]/tp[1,1]
 
 	def chunks(self, l, n):
 		return [list(l[i:i+n]) for i in range(0, len(l), n)]
@@ -286,64 +320,6 @@ class nodeMatrix:
 		
 			
 
-#############################################
-# Various examples of usage of minispice.py #
-#############################################
-#
-# Note ... these go in a separate file
-# Then minispice is invoked via the following
-#
-# import minispice 
-#
-#
-# End Comment
-
-#############################################
-# Example pi-Network: Direct Initialization #
-#############################################
-#freq = 1
-#size = 2	 
-#y = nodeMatrix(size, freq)
-
-#name = "R"
-#y.addPassive(name,0,1,1)
-#y.addPassive(name,1,2,1)
-#y.addPassive(name,2,0,1)
-#print x.ymatrix
-#print x.toTwoport(1,2)
-#print x.voltageGain(1,2)
-
-
-####################################################
-# Example pi-Network with C: Direct Initialization #
-####################################################
-#size = 2	 
-#freqList = np.linspace(.1, 2, 10000)
-#gain,phase = [],[]
-#for i,freq in enumerate(freqList):
-#	x = nodeMatrix(size, freq)
-#	name = "R"
-#	x.addPassive(name,0,1,1)
-#	x.addPassive(name,2,0,1)
-#	x.addPassive(name,1,2,1)
-#	name = "C"
-#	x.addPassive(name,1,1,2)
-#	gain.append(np.abs(x.voltageGain(1,2)))
-#	phase.append(np.angle(x.voltageGain(1,2),deg=True))
-
-#plt.figure(1)
-#plt.plot(freqList,gain)
-#plt.figure(2)
-#plt.plot(freqList,phase)
-
-#############################################
-# Example Transistor: Direct Initialization #
-#############################################
-#size = 5
-#freq = 1
-#params = {'b': 5, 'rbe': 1}
-#y = nodeMatrix(size,freq)
-#y.addTransistor("Q",1,3,2,"simple")
 
 
 ####################################################################

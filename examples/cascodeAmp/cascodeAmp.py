@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------------
-# 	minispice-> examples/notchFilter.py
+# 	minispice-> examples/cascodeAmp.py
 #	Copyright (C) 2019 Michael Winters
 #	github: https://github.com/mesoic
 #	email:  mesoic@protonmail.com
@@ -31,8 +31,8 @@ import numpy as np
 from minispice.freqAnalysis import freqAnalysis
 
 # Create a list of frequencies to solve
-freqList = np.linspace(1,4e7,1000)
+freqList = np.logspace(1,12,1000)
 
 # Import spice file and run anlaysis
-data = freqAnalysis.fromFile('./notchFilter.cir', freqList)
-handle = data.plotGain(1,2,"lin")
+data = freqAnalysis.fromFile('./cascode.cir', freqList)
+handle = data.plotGain(1,7,"dB")

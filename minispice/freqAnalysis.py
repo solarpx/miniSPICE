@@ -1,3 +1,28 @@
+# ---------------------------------------------------------------------------------
+# 	minispice-> freqAnalysis.py
+#	Copyright (C) 2019 Michael Winters
+#	github: https://github.com/mesoic
+#	email:  mesoic@protonmail.com
+# ---------------------------------------------------------------------------------
+#	
+#	Permission is hereby granted, free of charge, to any person obtaining a copy
+#	of this software and associated documentation files (the "Software"), to deal
+#	in the Software without restriction, including without limitation the rights
+#	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#	copies of the Software, and to permit persons to whom the Software is
+#	furnished to do so, subject to the following conditions:
+#	
+#	The above copyright notice and this permission notice shall be included in all
+#	copies or substantial portions of the Software.
+#	
+#	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#	SOFTWARE.
+#
 
 # Classes for array manipulation
 import numpy as np
@@ -10,6 +35,7 @@ import matplotlib.pyplot as plt
 
 # Imprt node matrix
 from .nodeMatrix import nodeMatrix
+from .Converter import *
 
 # Class to construct y-matrix for a list of frequencies
 class freqAnalysis: 
@@ -64,13 +90,13 @@ class freqAnalysis:
 					if re.match(r'R|C|L',str(lst[0])) is not None:
 						tmp.addPassive(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]))
 		
+					# Case of transistor
+					elif re.match(r'Q', str(lst[0])) is not None: 
+						tmp.addTransistor(str(lst[0]), int(lst[1]), int(lst[2]), int(lst[3]), str(lst[4]))
+
 					# Case of a VCCS (transconductance)			
 					elif re.match(r'G',str(lst[0])) is not None:
 						tmp.addVCCS(str(lst[0]), int(lst[1]), int(lst[2]), int(lst[3]), int(lst[4]), float(lst[5]) )
-
-					# Case of transistor
-					elif re.match(r'Q', str(lst[0])) is not None: 
-						tmp.addTransistor(str(lst[0]), int(lst[1]), int(lst[2]), float(lst[3]), str(lst[4]))
 
 					else:
 						pass
@@ -88,24 +114,6 @@ class freqAnalysis:
 			phase.append(np.angle(self.ygroup[i].voltageGain(n1,n2),deg=True))
 
 		# Long ugly plotting methods
-		if arg=="log":
-			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.semilogx(self.freqList,gain)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Voltage Gain")
-			
-			titleStr="vp("+str(n2)+")"
-			plt.figure(2)
-			plt.semilogx(self.freqList,phase)
-			plt.title(titleStr)
-			plt.xlabel("Frequency")
-			plt.ylabel("Voltage Phase Difference")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.show()
-
 		if arg=="lin":
 			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
 			plt.figure(1)
@@ -117,7 +125,43 @@ class freqAnalysis:
 			
 			titleStr="vp("+str(n2)+")"
 			plt.figure(2)
-			plt.plot(self.freqList,phase)
+			plt.plot(self.freqList, phase)
+			plt.title(titleStr)
+			plt.xlabel("Frequency")
+			plt.ylabel("Voltage Phase Difference")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.show()
+
+		if arg=="log":
+			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
+			plt.figure(1)
+			plt.title(titleStr)
+			plt.semilogx(self.freqList, gain)
+			plt.xlabel("Frequency")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.ylabel("Voltage Gain")
+			
+			titleStr="vp("+str(n2)+")"
+			plt.figure(2)
+			plt.semilogx(self.freqList, phase)
+			plt.title(titleStr)
+			plt.xlabel("Frequency")
+			plt.ylabel("Voltage Phase Difference")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.show()
+
+		if arg=="dB":
+			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
+			plt.figure(1)
+			plt.title(titleStr)
+			plt.semilogx(self.freqList, [todB(_) for _ in gain])
+			plt.xlabel("Frequency")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.ylabel("Voltage Gain")
+			
+			titleStr="vp("+str(n2)+")"
+			plt.figure(2)
+			plt.semilogx(self.freqList, phase)
 			plt.title(titleStr)
 			plt.xlabel("Frequency")
 			plt.ylabel("Voltage Phase Difference")
@@ -134,12 +178,30 @@ class freqAnalysis:
 			zMag.append(np.abs(1/tmp))
 			zPhase.append(np.angle((1/tmp),deg=True))
 		
-		# Long ugly plotting methods
+		# Long ugly plotting methods			
+		if arg=="lin":
+			titleStr="mag(Zin)"
+			plt.figure(1)
+			plt.title(titleStr)
+			plt.plot(self.freqList, zMag)
+			plt.xlabel("Frequency")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.ylabel("Input Impedance Magnitude")
+			
+			titleStr="phase(Zin)"
+			plt.figure(2)
+			plt.title(titleStr)
+			plt.plot(self.freqList, zPhase)
+			plt.xlabel("Frequency")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.ylabel("Input Impedance Phase")
+			plt.show()
+
 		if arg=="log":
 			titleStr="mag(Zin)"
 			plt.figure(1)
 			plt.title(titleStr)
-			plt.semilogx(self.freqList,zMag)
+			plt.semilogx(self.freqList, zMag)
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.ylabel("Input Impedance Magnitude")
@@ -151,25 +213,7 @@ class freqAnalysis:
 			plt.xlabel("Frequency")
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.ylabel("Input Impedance Phase")
-			plt.show()
-			
-		if arg=="lin":
-			titleStr="mag(Zin)"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.plot(self.freqList,zMag)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Input Impedance Magnitude")
-			
-			titleStr="phase(Zin)"
-			plt.figure(2)
-			plt.title(titleStr)
-			plt.plot(self.freqList,zPhase)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Input Impedance Phase")
-			plt.show()
+			plt.show()	
 
 	def outputImpedance(self,n1,n2,rs,arg):
 		zMag,zPhase = [],[]
@@ -181,24 +225,6 @@ class freqAnalysis:
 			zPhase.append(np.angle((1/tmp),deg=True))
 		   
 		# Long ugly plotting methods
-		if arg=="log":
-			titleStr="mag(Zout)"
-			plt.figure(3)
-			plt.title(titleStr)
-			plt.semilogx(self.freqList,zMag)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Output Impedance Magnitude")
-			
-			titleStr="phase(Zout)"
-			plt.figure(4)
-			plt.title(titleStr)
-			plt.semilogx(self.freqList,zPhase)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Output Impedance Phase")
-			plt.show()
-
 		if arg=="lin":
 			titleStr="mag(Zout)"
 			plt.figure(3)
@@ -216,3 +242,20 @@ class freqAnalysis:
 			plt.grid(True, which="both",ls="-", color='0.65')
 			plt.ylabel("Output Impedance Phase")
 
+		if arg=="log":
+			titleStr="mag(Zout)"
+			plt.figure(3)
+			plt.title(titleStr)
+			plt.semilogx(self.freqList,zMag)
+			plt.xlabel("Frequency")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.ylabel("Output Impedance Magnitude")
+			
+			titleStr="phase(Zout)"
+			plt.figure(4)
+			plt.title(titleStr)
+			plt.semilogx(self.freqList,zPhase)
+			plt.xlabel("Frequency")
+			plt.grid(True, which="both",ls="-", color='0.65')
+			plt.ylabel("Output Impedance Phase")
+			plt.show()
