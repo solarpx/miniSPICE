@@ -305,15 +305,35 @@ class nodeMatrix:
 		twoport=twoport/Delta
 		return twoport
 
+	# Calculate node gain
 	def voltageGain(self, n1, n2):
-		#The voltage gain is given by the ratio of cofactors
-		return self.cofactorN(n1,n2)/self.cofactorN(n1,n1)
 
-	def transferFunction(self,n1,n2):
+		#The voltage gain is given by the ratio of cofactors
+		return self.cofactorN(n1,n2) / self.cofactorN(n1,n1)
+
+	# Calculate gain in a network
+	def networkGain(self, n1, n2, Zs = 50., Zl = 50.):
 		tp = self.toTwoport(n1,n2)
+
+		# Source and load admittances
+		Ys = complex(1./Zs)
+		Yl = complex(1./Zl)
+
+		# calculate twoport gain between nodes
+		num = 4.0 * Ys.real * Yl.real * np.abs(tp[1,0])**2 
+		den = np.abs( ( tp[0,0] + Ys ) * ( tp[1,1] + Yl ) - tp[0,1] * tp[1,0] )**2
+
+		return num / den
+
+	# Calculate transfer function
+	def transferFunction(self,n1,n2):
+
+		tp = self.toTwoport(n1,n2)
+
 		return tp[1,0]/tp[1,1]
 
 	def chunks(self, l, n):
+
 		return [list(l[i:i+n]) for i in range(0, len(l), n)]
 
 

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------------
-# 	minispice-> examples/cascodeAmp.py
+# 	minispice-> examples/plotSmith.py
 #	Copyright (C) 2019 Michael Winters
 #	github: https://github.com/mesoic
 #	email:  mesoic@protonmail.com
@@ -30,26 +30,42 @@ import numpy as np
 # Import module
 from minispice.freqAnalysis import freqAnalysis
 from minispice.freqAnalysis import plotAnalysis
+from minispice.plotSmith import plotSmith
 
 # Create a list of frequencies to solve
-freqList = np.logspace(1,12,100)
+freq = np.linspace(100, 4.2e3, 1000)
 
-# Import spice file and run anlaysis
-analysis = freqAnalysis.fromFile('./cascodeAmp.cir', freqList)
-voltage_gain = analysis.calcVoltageGain(1, 7)
+# This example compares two chebyshev filters (order 2 and order 4)
+analysis2 = freqAnalysis.fromFile('./chebyshev2.cir', freq)
+analysis4 = freqAnalysis.fromFile('./chebyshev4.cir', freq)
 
-# Plot voltage gain (dB)
-if True:	
-	plt = plotAnalysis("log(dB)")
-	plt.plotGain(freq, voltage_gain)
-	plt.show()
+# The filters are designed for source and load impdances: 
+#	Rs = 1e3 Ohm and Rl = 5e3 Ohm
+network_gain2 = analysis2.calcNetworkGain(1, 3, 1e3, 5e3)
+network_gain4 = analysis4.calcNetworkGain(1, 5, 1e3, 5e3)
+
+# Plot frequency analysis data
+plt = plotAnalysis("lin(dB)")
+plt.plotGain(freq, network_gain2)
+plt.plotGain(freq, network_gain4)
+plt.show()
+
+# The SPICE files do not include the source and load impedances.
+# It is thus possible to look examine the behavioud of a bare LC 
+# network in the Smith Chart.
+
+# First we need to get the Sparameters of both networks
+Sparams2 = analysis2.Sparameters(1, 3)
+Sparams4 = analysis4.Sparameters(1, 5)
 
 
-
-# Calculate input impedance Rl = 50
-#if False: 
-#	analysis.plotInputImpedance(1, 7, 50., "log")	
-
-# Calculate output impedance Rs = 50
-#if False:
-#	analysis.plotOutputImpedance(1, 7, 50., "log")
+# We can then look at the parmeters in the Smith chart for both filters
+#	s[0,0] = s11
+#	s[0,1] = s12
+#	s[1,0] = s21
+#	s[2,2] = s22
+#
+pltSmith = plotSmith()
+pltSmith.plot( [ s[1,1] for f, s in Sparams2.items() ], color="tab:blue" )
+pltSmith.plot( [ s[1,1] for f, s in Sparams4.items() ], color="tab:orange" )
+pltSmith.show()

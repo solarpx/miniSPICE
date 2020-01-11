@@ -74,9 +74,8 @@ class plotSmith:
 		axes.set_rgrids([1],['',''])
 		axes.set_thetagrids([0,180],['',''])
 
-
 		# Constant resistance circles
-		for r in [0.0,0.2,0.5,1.0,2.0,5.0]:
+		for r in [0.0, 0.2, 0.5, 1.0, 2.0, 5.0]:
 
 			# Create an array of zeros		
 			z = np.zeros(self.params['grid_points'], complex)
@@ -108,7 +107,7 @@ class plotSmith:
 
 				
 		# Constant reactance circles
-		for x in [0.2,0.5,1.0,2.0,5.0]:
+		for x in [0.2, 0.5, 1.0, 2.0, 5.0]:
 
 			# Create an array of zeros		
 			z = np.zeros(self.params['grid_points'], complex)
@@ -172,42 +171,15 @@ class plotSmith:
 
 		# If we only pass one argument (array of complex numbers) 
 		if len(args) == 1.0:
-			self.axes.plot(np.angle(args[0]), np.abs(args[0]), **kwargs)
+			h = self.axes.plot(np.angle(args[0]), np.abs(args[0]), **kwargs)
 
 		# Otherwise simply pass along the parameters
 		else:
-			self.axes.plot(*args, **kwargs)
+			h = self.axes.plot(*args, **kwargs)
 
+		# Return artist object
+		return h	
 
 	# Wrap plot.show()
 	def show(self):
 		plt.show()	
-
-
-if __name__ == '__main__':
-
-	# Create a test network
-	freq = np.logspace(0,8,1000)
-
-	# Calculate a test network
-	C1,C2,L	= 1e-9, 1e-9, 5e-6
-	y12 = lambda w: complex(0,-w*C1+(1/(w*L)))
-	y11 = lambda w: complex(.01,-(1/(w*L))+w*C1)
-	
-
-	s11_vec,s12_vec = [],[]
-	for f in freq:
-		y = np.array([[y11(f),y12(f)],[y12(f),y11(f)]])
-		s11_vec.append(ytos(y)[0][0])
-		s12_vec.append(ytos(y)[0][1])
-	
-	_plt = plotSmith()
-	_plt.plot(s11_vec)
-	_plt.plot(np.angle(s12_vec), np.abs(s12_vec))
-	_plt.show()
-
-
-		
-
-
-

@@ -34,8 +34,6 @@ from minispice.freqAnalysis import freqAnalysis
 freqList = np.linspace(1,4e7,1000)
 
 # Import spice file and run anlaysis
-data = freqAnalysis.fromFile('./notchFilter.cir', freqList)
-handle = data.plotGain(1,2,"lin")
-
-
-
+anlaysis = freqAnalysis.fromFile('./notchFilter.cir', freqList)
+analysis.plotGain( analysis.calcVoltageGain(1, 2), "lin")
+analysis.show()

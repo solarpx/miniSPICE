@@ -138,181 +138,202 @@ class freqAnalysis:
 			
 		return cls(data, freq, components)
 
+	# Method to return S-parameters for two nodes over all frequencies
+	def Sparameters(self, n1, n2):
+
+		sdata = collections.OrderedDict()
+
+		for f, ymatrix in self.data.items(): 
+		
+			sdata[f] = ytos( ymatrix.toTwoport(n1,n2) )	
+
+		return sdata	
+
 	# Return a single matrix from simulation
 	def getMatrix(self, freq ):
 		return self.data[ freq ] if freq in self.data.keys() else None
 
+	# Method to return entire data structure	
+	def getData(self):
+		return self.data
 
-	# Method to plot gain between two nodes
-	def plotGain(self, n1, n2, arg=None):
+	# Calculate voltage gain between two nodes
+	def calcVoltageGain(self, n1, n2):	
+		return [ np.abs( self.data[f].voltageGain(n1,n2) ) for f, ymatrix in self.data.items() ]
+
+	# Calculate voltage phase shift for each frequency
+	def calcVoltagePhase(self, n1, n2):	
+		return [ np.angle( self.data[f].voltageGain(n1,n2), deg = True ) for f, ymatrix in self.data.items() ]
+
+	# Calculate gain of effective twoport network connected to Rs and Rl
+	def calcNetworkGain(self, n1, n2, Rs, Rl):
+		return [ np.abs( self.data[f].networkGain(n1,n2, Rs, Rl) ) for f, ymatrix in self.data.items() ]
+
+
+# Helper class to plot frequency analysis data
+class plotAnalysis: 
+
+	def __init__(self, arg = "lin"):
 		
-		# Obtain nodal gain for each frequency
-		gain = [ np.abs( self.data[f].voltageGain(n1,n2) ) for f, ymatrix in self.data.items() ]
+		# All plots will have the following
+		self.fig = plt.figure()
 
-		# Obtain phase shift for each frequency
-		phase = [ np.angle( self.data[f].voltageGain(n1,n2), deg = True ) for f, ymatrix in self.data.items() ]
+		# Create axes
+		self.ax0 = self.fig.add_subplot(111)
+		self.ax0.set_xlabel("Frequency (Hz)")
+		self.ax0.grid(True, which="both",ls="-", color='0.65')
 
-		# Long ugly plotting methods
-		if arg=="lin":
-			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.plot(self.freq, gain)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Voltage Gain")
-			
-			titleStr="vp("+str(n2)+")"
-			plt.figure(2)
-			plt.plot(self.freq, phase)
-			plt.title(titleStr)
-			plt.xlabel("Frequency")
-			plt.ylabel("Phase (deg)")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.show()
+		# Plotting style
+		self.arg = arg
 
-		if arg=="log":
-			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.semilogx(self.freq, gain)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Voltage Gain")
-			
-			titleStr="vp("+str(n2)+")"
-			plt.figure(2)
-			plt.semilogx(self.freq, phase)
-			plt.title(titleStr)
-			plt.xlabel("Frequency")
-			plt.ylabel("Phase (deg)")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.show()
-
-		if arg=="dB":
-			titleStr="vm("+str(n2)+")/"+"vm("+str(n1)+")"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.semilogx(self.freq, [todB(_) for _ in gain])
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("Voltage Gain (dB)")
-			
-			titleStr="vp("+str(n2)+")"
-			plt.figure(2)
-			plt.semilogx(self.freq, phase)
-			plt.title(titleStr)
-			plt.xlabel("Frequency")
-			plt.ylabel("Phase (deg)")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.show()
-
-
-	# Method to plot input impedance for a given load impedance (rl = 50 Ohm)
-	def plotInputImpedance(self,n1,n2,rl,arg):
+	# Plotting method
+	def plotGain(self, freq, gain, arg=None):
 		
-		g  = lambda r : complex(1/r)
-		zMag, zPhase = [], []
+		# Linear frequency 
+		if self.arg == "lin":		
+			self.ax0.plot(freq, gain)
+			self.ax0.set_ylabel("Gain")
+
+		elif self.arg == "lin(dB)":
+			self.ax0.plot(freq, [todB(_) for _ in gain])
+			self.ax0.set_ylabel("Gain (dB)")
+		
+		# Log frequency 
+		elif self.arg == "log":
+			self.ax0.semilogx(freq, gain)
+			self.ax0.set_ylabel("Gain")
+			
+		elif self.arg == "log(dB)":
+			self.ax0.semilogx(freq, [todB(_) for _ in gain])
+			self.ax0.set_ylabel("Gain (dB)")
+	
+	# Plotting method
+	def plotPhase(self, freq, phase, arg=None):
+
+		# Linear frequency 
+		if self.arg == "lin":		
+			self.ax0.plot(freq, gain)
+			self.ax0.set_ylabel("Phase (deg)")
+
+		# Log frequency 
+		elif self.arg == "log":
+			self.ax0.semilogx(freq, gain)
+			self.ax0.set_ylabel("Phase (deg)")
+
+	# Wrap mpl show plots
+	def show(self):
+		plt.show()
+
+	
+
+
+	#### IMPEDANCE CALCULATIONS DO NOT BELONG HERE ####
+	## MOVE TO nodeMatrix.py ##	
+	# # Method to plot input impedance for a given load impedance (rl = 50 Ohm)
+	# def plotInputImpedance(self,n1,n2,rl,arg):
+		
+	# 	g  = lambda r : complex(1/r)
+	# 	zMag, zPhase = [], []
 		 
-		# Calculate input impedance
-		for f, ymatrix in self.data.items():
+	# 	# Calculate input impedance
+	# 	for f, ymatrix in self.data.items():
 			
-			twoport = ymatrix.toTwoport(n1,n2)
-			delta = np.linalg.det(twoport)
-			tmp = ( twoport[1,1] + g(rl) )/( delta + (twoport[0,0]*g(rl)) )
+	# 		twoport = ymatrix.toTwoport(n1,n2)
+	# 		delta = np.linalg.det(twoport)
+	# 		tmp = ( twoport[1,1] + g(rl) )/( delta + (twoport[0,0]*g(rl)) )
 
-			# Append data to array	
-			zMag.append( np.abs(tmp) )
-			zPhase.append( np.angle(tmp, deg=True) )
+	# 		# Append data to array	
+	# 		zMag.append( np.abs(tmp) )
+	# 		zPhase.append( np.angle(tmp, deg=True) )
 		
-		# Long ugly plotting methods			
-		if arg=="lin":
-			titleStr="mag(Zin)"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.plot(self.freq, zMag)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("|Zin|")
+	# 	# Long ugly plotting methods			
+	# 	if arg=="lin":
+	# 		titleStr="mag(Zin)"
+	# 		plt.figure(1)
+	# 		plt.title(titleStr)
+	# 		plt.plot(self.freq, zMag)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("|Zin|")
 			
-			titleStr="phase(Zin)"
-			plt.figure(2)
-			plt.title(titleStr)
-			plt.plot(self.freq, zPhase)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("<Zin (deg)")
-			plt.show()
+	# 		titleStr="phase(Zin)"
+	# 		plt.figure(2)
+	# 		plt.title(titleStr)
+	# 		plt.plot(self.freq, zPhase)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("<Zin (deg)")
+	# 		plt.show()
 
 
-		if arg=="log":
-			titleStr="mag(Zin)"
-			plt.figure(1)
-			plt.title(titleStr)
-			plt.semilogx(self.freq, zMag)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("|Zin|")
+	# 	if arg=="log":
+	# 		titleStr="mag(Zin)"
+	# 		plt.figure(1)
+	# 		plt.title(titleStr)
+	# 		plt.semilogx(self.freq, zMag)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("|Zin|")
 			
-			titleStr="phase(Zin)"
-			plt.figure(2)
-			plt.title(titleStr)
-			plt.semilogx(self.freq,zPhase)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("<Zin (deg)")
-			plt.show()	
+	# 		titleStr="phase(Zin)"
+	# 		plt.figure(2)
+	# 		plt.title(titleStr)
+	# 		plt.semilogx(self.freq,zPhase)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("<Zin (deg)")
+	# 		plt.show()	
 
 
-	# Method to plot output impedance for a given source impedance (rs = 50 Ohm)
-	def plotOutputImpedance(self, n1, n2, rs, arg):
+	# # Method to plot output impedance for a given source impedance (rs = 50 Ohm)
+	# def plotOutputImpedance(self, n1, n2, rs, arg):
 
-		g  = lambda r : complex(1/r)
-		zMag, zPhase = [], []
+	# 	g  = lambda r : complex(1/r)
+	# 	zMag, zPhase = [], []
 		 
-		# Calculate output impedance
-		for f, ymatrix in self.data.items():
+	# 	# Calculate output impedance
+	# 	for f, ymatrix in self.data.items():
 			
-			twoport = ymatrix.toTwoport(n1, n2)
-			delta = np.linalg.det(twoport)
-			tmp = ( twoport[0,0] + g(rs) )/( delta + (twoport[1,1]*g(rs)) ) 
+	# 		twoport = ymatrix.toTwoport(n1, n2)
+	# 		delta = np.linalg.det(twoport)
+	# 		tmp = ( twoport[0,0] + g(rs) )/( delta + (twoport[1,1]*g(rs)) ) 
 
-			# Append data to array	
-			zMag.append( np.abs( tmp ) )
-			zPhase.append( np.angle(tmp, deg=True) )
+	# 		# Append data to array	
+	# 		zMag.append( np.abs( tmp ) )
+	# 		zPhase.append( np.angle(tmp, deg=True) )
 		   
-		# Long ugly plotting methods
-		if arg=="lin":
-			titleStr="mag(Zout)"
-			plt.figure(3)
-			plt.title(titleStr)
-			plt.plot(self.freq, zMag)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("|Zout|")
+	# 	# Long ugly plotting methods
+	# 	if arg=="lin":
+	# 		titleStr="mag(Zout)"
+	# 		plt.figure(3)
+	# 		plt.title(titleStr)
+	# 		plt.plot(self.freq, zMag)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("|Zout|")
 			
-			titleStr="phase(Zout)"
-			plt.figure(4)
-			plt.title(titleStr)
-			plt.plot(self.freq, zPhase)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("<Zout (deg)")
+	# 		titleStr="phase(Zout)"
+	# 		plt.figure(4)
+	# 		plt.title(titleStr)
+	# 		plt.plot(self.freq, zPhase)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("<Zout (deg)")
 
-		if arg=="log":
-			titleStr="mag(Zout)"
-			plt.figure(3)
-			plt.title(titleStr)
-			plt.semilogx(self.freq, zMag)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("|Zout|")
+	# 	if arg=="log":
+	# 		titleStr="mag(Zout)"
+	# 		plt.figure(3)
+	# 		plt.title(titleStr)
+	# 		plt.semilogx(self.freq, zMag)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("|Zout|")
 			
-			titleStr="phase(Zout)"
-			plt.figure(4)
-			plt.title(titleStr)
-			plt.semilogx(self.freq, zPhase)
-			plt.xlabel("Frequency")
-			plt.grid(True, which="both",ls="-", color='0.65')
-			plt.ylabel("<Zout (deg)")
-			plt.show()
+	# 		titleStr="phase(Zout)"
+	# 		plt.figure(4)
+	# 		plt.title(titleStr)
+	# 		plt.semilogx(self.freq, zPhase)
+	# 		plt.xlabel("Frequency")
+	# 		plt.grid(True, which="both",ls="-", color='0.65')
+	# 		plt.ylabel("<Zout (deg)")
+	# 		plt.show()

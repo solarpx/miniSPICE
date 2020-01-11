@@ -46,25 +46,25 @@ active  = activeAnalysis(sparams)
 active.analysis()
 
 # Plot stability and gain circles
-pltS = plotSmith()
+pltSmith = plotSmith()
 
 # Extract stability circle data for plotting
 _input  = active.inputStabilityCircle()["data"]
 _output = active.outputStabilityCircle()["data"]
 
-pltS.plot(_input, linestyle=":")
-pltS.plot(_output, linestyle=":")
+pltSmith.plot(_input, linestyle=":")
+pltSmith.plot(_output, linestyle=":")
 
 # Constant gain circles (3.0dB to 8.0dB) (grey)
 for dB in [3.0, 4.0, 5.0, 6.0, 7.0, 8.0]:
-    pltS.plot( active.constantGainCircle(dB)["data"] , color="grey", linewidth=0.8)
+    pltSmith.plot( active.constantGainCircle(dB)["data"] , color="grey", linewidth=0.8)
 
 # 9.0dB gain circle and conjugate (orange)
 _gain = active.constantGainCircle(dB)["data"]
 _conj = active.conjugateCircleData(_gain)
 
-pltS.plot( _gain, color="tab:orange" )
-pltS.plot( _conj, color="tab:blue" )
+pltSmith.plot( _gain, color="tab:orange" )
+pltSmith.plot( _conj, color="tab:blue" )
 
 
 # Now we would like to perform the conjugate match. Pick a Gl on the  
@@ -74,8 +74,8 @@ GammaL = _gain[350]
 GammaS = _conj[350]
 
 # Plot points on the smith chart to visualize. 
-pltS.plot([GammaL], marker="o", color="tab:orange")
-pltS.plot([GammaS], marker="o", color="tab:blue")
+pltSmith.plot([GammaL], marker="o", color="tab:orange")
+pltSmith.plot([GammaS], marker="o", color="tab:blue")
 
 # Print match data to screen
 print("\nConjugate Match (Reflection Coefficients)")
@@ -90,4 +90,4 @@ print("\tYl = %s"%(gammatoy(GammaL,1)) )
 print("\n")
 
 # Show smith plot
-pltS.show()
+pltSmith.show()
