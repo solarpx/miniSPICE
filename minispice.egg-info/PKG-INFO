@@ -1,0 +1,29 @@
+Metadata-Version: 1.2
+Name: minispice
+Version: 1.1.dev0
+Summary: A minimalistic SPICE circuit simulator
+Home-page: https://github.com/mesoic/minispice
+Author: Michael Winters
+Author-email: mesoic@protonmail.com
+License: MIT License
+Description: UNKNOWN
+Keywords: Simulation Electronics Analysis Education
+Platform: Linux
+Platform: Windows
+Platform: Mac
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Programming Language :: Python
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Requires-Python: >=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*
