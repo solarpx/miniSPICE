@@ -1,3 +1,0 @@
-visa
-matplotlib
-PyQt5
