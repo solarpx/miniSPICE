@@ -157,26 +157,70 @@ class freqAnalysis:
 	def getData(self):
 		return self.data
 
-	# Methods to return abs and angle of list
-	def abs(self, _data):
-		return [ np.abs(_) for _ in _data ]
-
-	def angle(self, _data):
-		return [ np.angle(_) for _ in _data ]	
-
-	# Calculate voltage gain between two nodes in node admittance matrix
+	# Calculate voltage gain between two nodes
 	def calcVoltageGain(self, n1, n2):	
-		return [ self.data[f].voltageGain(n1, n2) for f, ymatrix in self.data.items() ]
+		return [ np.abs( self.data[f].voltageGain(n1, n2) ) for f, ymatrix in self.data.items() ]
+
+	# Calculate voltage phase shift for each frequency
+	def calcVoltagePhase(self, n1, n2):	
+		return [ np.angle( self.data[f].voltageGain(n1, n2), deg = True ) for f, ymatrix in self.data.items() ]
 
 	# Calculate gain of effective twoport network connected to Rs and Rl
 	def calcNetworkGain(self, n1, n2, Zs, Zl):
 		return [ np.abs( self.data[f].networkGain(n1, n2, Zs, Zl) ) for f, ymatrix in self.data.items() ]
 
-	# Calculate input impedance
-	def calcInputImpedance(self, n1, n2, Zl):	
-		return [ self.data[f].inputImpedance(n1, n2, Zl) for f, ymatrix in self.data.items() ]
 
-	# Calculate output impedance
-	def calcOutputImpedance(self, n1, n2, Zs):	
-		return [ self.data[f].outputImpedance(n1, n2, Zs) for f, ymatrix in self.data.items() ]
+# Helper class to plot frequency analysis data
+class plotAnalysis: 
+
+	def __init__(self, arg = "lin"):
+		
+		# All plots will have the following
+		self.fig = plt.figure()
+
+		# Create axes
+		self.ax0 = self.fig.add_subplot(111)
+		self.ax0.set_xlabel("Frequency (Hz)")
+		self.ax0.grid(True, which="both",ls="-", color='0.65')
+
+		# Plotting style
+		self.arg = arg
+
+	# Plotting method
+	def plotGain(self, freq, gain, arg=None):
+		
+		# Linear frequency 
+		if self.arg == "lin":		
+			self.ax0.plot(freq, gain)
+			self.ax0.set_ylabel("Gain")
+
+		elif self.arg == "lin(dB)":
+			self.ax0.plot(freq, [todB(_) for _ in gain])
+			self.ax0.set_ylabel("Gain (dB)")
+		
+		# Log frequency 
+		elif self.arg == "log":
+			self.ax0.semilogx(freq, gain)
+			self.ax0.set_ylabel("Gain")
+			
+		elif self.arg == "log(dB)":
+			self.ax0.semilogx(freq, [todB(_) for _ in gain])
+			self.ax0.set_ylabel("Gain (dB)")
 	
+	# Plotting method
+	def plotPhase(self, freq, phase, arg=None):
+
+		# Linear frequency 
+		if self.arg == "lin":		
+			self.ax0.plot(freq, gain)
+			self.ax0.set_ylabel("Phase (deg)")
+
+		# Log frequency 
+		elif self.arg == "log":
+			self.ax0.semilogx(freq, gain)
+			self.ax0.set_ylabel("Phase (deg)")
+
+	# Wrap mpl show plots
+	def show(self):
+		plt.show()
+		

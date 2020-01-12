@@ -26,10 +26,10 @@
 
 #!/usr/bin/env python 
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Import modules
 from minispice.nodeMatrix import nodeMatrix
+from minispice.plotAnalysis import plotAnalysis
 
 # These examples provide an illustration of how to interact
 # directly with the nodeMatrix class.
@@ -84,13 +84,23 @@ if True:
 		mag.append( np.abs(_gain) )
 		phase.append( np.angle(_gain, deg=True) )
 
-	# Plot simulation data
-	plt.figure(1)
-	plt.plot(freq, mag)
-	plt.xlabel("Frequency (Hz)")
-	plt.ylabel("Voltage Gain")
-	plt.figure(2)
-	plt.plot(freq, phase)
-	plt.xlabel("Frequency (Hz)")
-	plt.ylabel("Phase (deg)")
+
+	# Create plot analysis object
+	plt = plotAnalysis()
+	
+	# Plot frequency analysis data
+	key = "MAG"
+	plt.add_figure(key)
+	plt.set_xlabel(key, "Frequency (Hz)")
+	plt.set_ylabel(key, "Voltage Gain")
+	plt.set_title(key, "High Pass Filter" )
+	plt.plot(key, freq, mag, "lin")
+
+	key = "PHASE"
+	plt.add_figure(key)
+	plt.set_xlabel(key, "Frequency (Hz)")
+	plt.set_ylabel(key, "Voltage Phase (deg)")
+	plt.set_title(key, "High Pass Filter" )
+	plt.plot(key, freq, phase, "lin")
+
 	plt.show()

@@ -28,44 +28,47 @@
 import numpy as np
 
 # Import module
-from minispice.activeAnalysis import activeAnalysis
 from minispice.freqAnalysis import freqAnalysis
-from minispice.plotSmith import plotSmith
+from minispice.plotAnalysis import plotAnalysis
+from minispice.amplAnalysis import amplAnalysis
 from minispice.Converter import *
 
 # We would like to match our intrinsic transistor at 10GHz for maximum gain. 
 # The system impedance is 50Ohm. First we need to extract the yparamters
-analysis = freqAnalysis.fromFile("./intrinsic.cir", [1e10])
+analysis = freqAnalysis.fromFile("./transistor_model.cir", [1e10])
 
 # Extract the data and compress to twoport
 ymatrix = analysis.getMatrix( freq = 1e10 )
 sparams = ytos( ymatrix.toTwoport(1,6) )
 
 # Pass parameters and call the analysis
-active  = activeAnalysis(sparams)
+active = amplAnalysis(sparams)
 active.analysis()
-
-# Plot stability and gain circles
-pltSmith = plotSmith()
 
 # Extract stability circle data for plotting
 _input  = active.inputStabilityCircle()["data"]
 _output = active.outputStabilityCircle()["data"]
 
-pltSmith.plot(_input, linestyle=":")
-pltSmith.plot(_output, linestyle=":")
+# Prepare a plotting object
+plt = plotAnalysis()
+
+# Prepare a smith chart
+key = "SMITH_CHART"
+plt.add_smith(key)
+plt.set_title(key, "Active Microwave Circuit Design: Impedance Matching")
+plt.plot_smith(key, _input, linestyle=":")
+plt.plot_smith(key, _output, linestyle=":")
 
 # Constant gain circles (3.0dB to 8.0dB) (grey)
 for dB in [3.0, 4.0, 5.0, 6.0, 7.0, 8.0]:
-    pltSmith.plot( active.constantGainCircle(dB)["data"] , color="grey", linewidth=0.8)
+    plt.plot_smith(key, active.constantGainCircle(dB)["data"] , color="grey", linewidth=0.8)
 
 # 9.0dB gain circle and conjugate (orange)
 _gain = active.constantGainCircle(dB)["data"]
 _conj = active.conjugateCircleData(_gain)
 
-pltSmith.plot( _gain, color="tab:orange" )
-pltSmith.plot( _conj, color="tab:blue" )
-
+plt.plot_smith(key, _gain, color="tab:orange" )
+plt.plot_smith(key, _conj, color="tab:blue" )
 
 # Now we would like to perform the conjugate match. Pick a Gl on the  
 # _gain circle and find the associated value on conjugate circle. 
@@ -74,8 +77,8 @@ GammaL = _gain[350]
 GammaS = _conj[350]
 
 # Plot points on the smith chart to visualize. 
-pltSmith.plot([GammaL], marker="o", color="tab:orange")
-pltSmith.plot([GammaS], marker="o", color="tab:blue")
+plt.plot_smith(key, [GammaL], marker="o", color="tab:orange")
+plt.plot_smith(key, [GammaS], marker="o", color="tab:blue")
 
 # Print match data to screen
 print("\nConjugate Match (Reflection Coefficients)")
@@ -90,4 +93,4 @@ print("\tYl = %s"%(gammatoy(GammaL,1)) )
 print("\n")
 
 # Show smith plot
-pltSmith.show()
+plt.show()

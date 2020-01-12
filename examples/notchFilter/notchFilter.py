@@ -29,11 +29,33 @@ import numpy as np
 
 # Import module
 from minispice.freqAnalysis import freqAnalysis
+from minispice.plotAnalysis import plotAnalysis
 
 # Create a list of frequencies to solve
-freqList = np.linspace(1,4e7,1000)
+freq = np.linspace(1,4e7,1000)
 
 # Import spice file and run anlaysis
-anlaysis = freqAnalysis.fromFile('./notchFilter.cir', freqList)
-analysis.plotGain( analysis.calcVoltageGain(1, 2), "lin")
-analysis.show()
+analysis = freqAnalysis.fromFile('./notchFilter.cir', freq)
+voltage_gain = analysis.calcVoltageGain(1, 2)
+
+# Create plot analysis object
+plt = plotAnalysis()
+
+# Plot frequency analysis data (magnigude)
+key = "MAG" 
+plt.add_figure(key)
+plt.set_xlabel(key, "Frequency (Hz)")
+plt.set_ylabel(key, "Voltage Gain (magnitude)")
+plt.set_title(key, "Notch Filter Frequency Analysis")
+plt.plot(key, freq, analysis.abs(voltage_gain), "lin")
+
+# Plot frequency analysis data (phase)
+key = "PHASE" 
+plt.add_figure(key)
+plt.set_xlabel(key, "Frequency (Hz)")
+plt.set_ylabel(key, "Voltage Gain (phase)")
+plt.set_title(key, "Notch Filter Frequency Analysis")
+plt.plot(key, freq, analysis.angle(voltage_gain), "lin")
+
+# Show data
+plt.show()

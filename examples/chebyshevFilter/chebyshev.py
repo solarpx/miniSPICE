@@ -29,8 +29,7 @@ import numpy as np
 
 # Import module
 from minispice.freqAnalysis import freqAnalysis
-from minispice.freqAnalysis import plotAnalysis
-from minispice.plotSmith import plotSmith
+from minispice.plotAnalysis import plotAnalysis
 
 # Create a list of frequencies to solve
 freq = np.linspace(100, 4.2e3, 1000)
@@ -44,11 +43,17 @@ analysis4 = freqAnalysis.fromFile('./chebyshev4.cir', freq)
 network_gain2 = analysis2.calcNetworkGain(1, 3, 1e3, 5e3)
 network_gain4 = analysis4.calcNetworkGain(1, 5, 1e3, 5e3)
 
+# Create plot analysis object
+plt = plotAnalysis()
+
 # Plot frequency analysis data
-plt = plotAnalysis("lin(dB)")
-plt.plotGain(freq, network_gain2)
-plt.plotGain(freq, network_gain4)
-plt.show()
+key = "NETWORK"
+plt.add_figure(key)
+plt.set_xlabel(key, "Frequency (Hz)")
+plt.set_ylabel(key, "Network Gain (dB)")
+plt.set_title(key, "Chebyshev Filters : Order 2 (blue) : Order 4 (orange)" )
+plt.plot(key, freq, network_gain2, "lin(dB)")
+plt.plot(key, freq, network_gain4, "lin(dB)")
 
 # The SPICE files do not include the source and load impedances.
 # It is thus possible to look examine the behavioud of a bare LC 
@@ -65,7 +70,14 @@ Sparams4 = analysis4.Sparameters(1, 5)
 #	s[1,0] = s21
 #	s[2,2] = s22
 #
-pltSmith = plotSmith()
-pltSmith.plot( [ s[1,1] for f, s in Sparams2.items() ], color="tab:blue" )
-pltSmith.plot( [ s[1,1] for f, s in Sparams4.items() ], color="tab:orange" )
-pltSmith.show()
+data2 = [ s[1,1] for f, s in Sparams2.items() ]
+data4 = [ s[1,1] for f, s in Sparams4.items() ]
+
+key = "SMITH_CHART"
+plt.add_smith(key)
+plt.set_title(key, "Chebyshev Filters(s22) : Order 2 (blue) : Order 4 (orange)" )
+plt.plot_smith(key, data2, color="tab:blue" )
+plt.plot_smith(key, data4, color="tab:orange" )
+
+# Show plots
+plt.show()

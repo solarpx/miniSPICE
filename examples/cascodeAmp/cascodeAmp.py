@@ -29,27 +29,47 @@ import numpy as np
 
 # Import module
 from minispice.freqAnalysis import freqAnalysis
-from minispice.freqAnalysis import plotAnalysis
+from minispice.plotAnalysis import plotAnalysis
 
 # Create a list of frequencies to solve
-freqList = np.logspace(1,12,100)
+freq = np.logspace(1,12,100)
 
 # Import spice file and run anlaysis
-analysis = freqAnalysis.fromFile('./cascodeAmp.cir', freqList)
-voltage_gain = analysis.calcVoltageGain(1, 7)
+analysis = freqAnalysis.fromFile('./cascodeAmp.cir', freq)
+network_gain = analysis.calcNetworkGain(1, 7, Zs = 4e3, Zl = 4.0e3)
+
+# Calculate input impedance and output impedance
+input_impedance = analysis.calcInputImpedance(1, 7, Zl = 4.0e3)
+output_impedance = analysis.calcOutputImpedance(1, 7, Zs = 4.0e3)
+
+# Create plot analysis object
+plt = plotAnalysis()
 
 # Plot voltage gain (dB)
-if True:	
-	plt = plotAnalysis("log(dB)")
-	plt.plotGain(freq, voltage_gain)
-	plt.show()
+key = "NETWORK"
+plt.add_figure(key)
+plt.set_xlabel(key, "Frequency (Hz)")
+plt.set_ylabel(key, "Network Gain (dB)")
+plt.set_title(key, "Cascode Amplifier Frequency Analysis")
+plt.plot(key, freq, network_gain, "log(dB)")
 
+# Plot input and output impedance 
+key = "Z_MAG"
+plt.add_figure(key)
+plt.set_xlabel(key, "Frequency (Hz)")
+plt.set_ylabel(key, "|Impedance| (Ohm)")
+plt.set_title(key, "Zin(blue) : Zout(orange)")
+plt.plot(key, freq, analysis.abs(input_impedance), "loglog")
+plt.plot(key, freq, analysis.abs(output_impedance), "loglog")
 
+# Plot input and output impedance 
+key = "Z_PHASE"
+plt.add_figure(key)
+plt.set_xlabel(key, "Frequency (Hz)")
+plt.set_ylabel(key, "<Impedance (deg)")
+plt.set_title(key, "Zin(blue) : Zout(orange)")
+plt.plot(key, freq, analysis.angle(input_impedance), "log")
+plt.plot(key, freq, analysis.angle(output_impedance), "log")
 
-# Calculate input impedance Rl = 50
-#if False: 
-#	analysis.plotInputImpedance(1, 7, 50., "log")	
-
-# Calculate output impedance Rs = 50
-#if False:
-#	analysis.plotOutputImpedance(1, 7, 50., "log")
+# Show plots
+plt.show()
