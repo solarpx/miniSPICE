@@ -42,7 +42,7 @@ class nodeMatrix:
 	def showMatrix(self):
 		print(self.ymatrix)
 
-	def addPassive(self,name,n1,n2,value):
+	def addPassive(self, name, n1, n2, value):
 		# Convert to float automatically
 		value = float(value)
 

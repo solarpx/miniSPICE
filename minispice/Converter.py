@@ -274,7 +274,6 @@ def gammatoy(gamma,y0=0.02):
 def ytogamma(y,y0=0.02):
     return complex((y-y0)/(y+y0))
 
-
 # A few smith chart things
 def seriesL(x,f,z0=50.):
     w = 2*math.pi*f
@@ -310,6 +309,18 @@ def todB(val):
 # dB to scalar
 def fromDb(val):
     return np.power(10.0, val/10.)
+
+# Thevinen to Norton transformations
+def nortonI(_vt, _rt):
+    return ( _vt / _rt )
+
+def nortonG(_rt):
+    return ( 1.0 / _rt )
+
+
+
+
+
 
 # A test program
 if __name__=="__main__":
