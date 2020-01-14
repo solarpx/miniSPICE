@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------
-# 	minispice-> plotAnalysis.py
-#	Copyright (C) 2019 Michael Winters
+# 	minispice -> plotAnalysis.py
+#	Copyright (C) 2020 Michael Winters
 #	github: https://github.com/mesoic
 #	email:  mesoic@protonmail.com
 # ---------------------------------------------------------------------------------

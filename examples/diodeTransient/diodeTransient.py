@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------------
-#   minispice-> diodeTransient.py
+#   minispice -> examples/diodeTransient.py
 #   Copyright (C) 2019 Michael Winters
 #   github: https://github.com/mesoic
 #   email:  mesoic@protonmail.com

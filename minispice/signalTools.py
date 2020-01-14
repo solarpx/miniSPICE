@@ -76,3 +76,97 @@ class signalTools:
 		} 
 
 		return _signal
+
+
+# A class with two methods which to calclates the Discrete Fourier Transform
+# and Inverse Discrete Fourier Transform matricies. 
+class DiscreteFourierTransform:
+
+	# User defines frequency and number of harmonics
+	def __init__(self, freq = 1e9, n = 20):
+
+		# Calculate n harmonics for initialized frequency
+		self.harmonics = {
+			"n"	 : int(n),			  
+			"freq"  : float(freq),
+			"omega" : [ _ * ( 2 * np.pi * freq ) for _ in range( int(n) ) ],
+			"tau"   : [ _ / (  freq * int(n) )   for _ in range( int(n) ) ],	
+		} 
+
+		# Build discrete fourier transform matrices
+		self.build_transform()
+
+	 # Return an empty matrix of zeros for matrices
+	def zeros(self):
+
+		return np.zeros(
+			shape = ( self.harmonics["n"], self.harmonics["n"] ), 
+			dtype='complex'
+		)
+
+	# Get harmonic by index (angular frequency)
+	def get_omega(self, _): 
+	   
+		return self.harmonics["omega"][_]
+
+	# Get harmonic by index (period)
+	def get_tau(self, _): 
+	   
+		return self.harmonics["tau"][_]
+
+	# Build the transform matrices   
+	def build_transform(self):	
+
+		# Cache number of harmonics
+		n = self.harmonics["n"]
+
+		# Calculate the discrete fourier transform matrix
+		self.dft, self.idft = self.zeros(), self.zeros()
+		
+		for i in range( n ):
+		
+			for j in range( n ):
+				
+				# Forward transform element
+				_dft = -1.0 * self.get_omega(i) * self.get_tau(j) 
+				
+				self.dft[i][j] = np.exp( np.complex( 0, _dft ) )
+
+				# Inverse transform element
+				_idft = 1.0 * self.get_omega(j) * self.get_tau(i)
+				
+				self.idft[i][j] = np.exp( np.complex(0, _idft ) )
+
+	# Calculate Discrete Fourier Transform 
+	# for time domain signal (vt)
+	def DFT(self, vt): 
+		
+		return np.dot(self.dft, vt)
+
+	# Calculate Inverse Discrete Fourier Transform 
+	# for frequency domain signal (vf)
+	def IDFT(self, vf): 
+		
+		return np.dot(self.idft, vf)
+		
+
+	# A class which forms the dual vector of a vector f using the DFT/IDFT method. 
+	# User specifys whether the vector passed is in the time or frequency domain. 
+	class dual:
+
+		def __init__(self, signal, freq, domain):
+
+			# Initialize DFT object for frequency
+			self.DFT = DiscreteFourierTransform( freq, len(signal) )
+
+			# If initializing a vector time domain
+			if domain == 'time':
+				
+				self.time = signal
+				self.freq = self.DFT.DFT(signal)
+
+			# If initializing a vector frequency domain
+			if domain == 'freq':
+				
+				self.time = self.DFT.IDFT(signal)
+				self.freq = signal
