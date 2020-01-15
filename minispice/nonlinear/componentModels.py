@@ -115,3 +115,62 @@ class vdp_conductance:
 	def dc(self, _v):
 
 		return 0.0
+
+# Nonlinear transistor model
+class HFET:
+
+    def __init__(self):
+
+        self.a = -0.080
+        self.b = 3.3
+        self.c = 0.41
+        self.d = 10.0
+        self.g = 0.056
+        self.phi = 2.4 * ( np.pi / 180.)
+
+    ## f1(ugd+ , ugs+)*f2(vgs-vgd) - f1(ugs- , ugd-)*f2(vgd-vgs)
+    def f(self, _Vgd, _Vgs):
+        
+        # Source drain current difference
+        delta = _Vgs - _Vgd
+
+        # (ugd+, ugs+)
+        _pgd, _pgs = self._plus(_Vgd, _Vgs) 
+
+        # (ugd-, ugs)    
+        _mgd, _mgs = self._minus(_Vgd, _Vgs) 
+    
+        # Calculate subcurrents
+        _fp = self.f1(_pgd, _pgs) * self.f2(  1.0 * delta )
+        _fm = self.f1(_mgs, _mgd) * self.f2( -1.0 * delta )
+
+        # Return current
+        return  self.g * ( _fp - _fm )
+
+    # Calculate (ugd+, ugs+) terms
+    def _plus(self, _Vgd, _Vgs): 
+
+        _pgs =  np.cos( self.phi ) * _Vgs - np.sin( self.phi ) * _Vgd 
+        _pgd =  np.cos( self.phi ) * _Vgd + np.sin( self.phi ) * _Vgs 
+        
+        return _pgd, _pgs
+
+    # Calculate (ugd-, ugs-) terms
+    def _minus(self, _Vgd, _Vgs): 
+
+        _mgs =  np.sin( self.phi ) * _Vgd + np.cos( self.phi ) * _Vgs 
+        _mgd =  np.cos( self.phi ) * _Vgd - np.sin( self.phi ) * _Vgs 
+
+        return _mgd, _mgs
+
+    def f1(self, _u1, _u2 ):
+
+        const = np.exp( -self.b * ( _u2 + self.c) )
+
+        return (1.0 + self.a * _u1)*(1.0 - np.tanh(const))
+
+    def f2(self, _v ):
+
+        const = np.exp(-self.d * _v)
+
+        return (1.0 - np.tanh(const))
