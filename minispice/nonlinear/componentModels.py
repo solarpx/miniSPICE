@@ -32,6 +32,8 @@ class diode:
 
 	def __init__(self): 
 
+		self.name = "Diode"
+
 		self.G   = 0.33333		# Diode conductance
 		self.n   = 1.3			# Ideality factor
 		self.Vt  = 0.026		# Thermal voltage (kbT@300K")
@@ -60,3 +62,56 @@ class diode:
 
 		return ( self.Cj * self.g / self.phi ) * np.power( ( 1 - ( _v / self.phi) ), -1.0 * (self.g  + 1.0 ) )
 		
+# Class to represent a cross diode
+class cross_diode:
+
+	def __init__(self): 
+
+		self.name = "Cross Diode"
+
+		self.diode = diode()
+
+	# Diode current equation
+	def f(self, _v):
+	
+		return self.diode.f(_v) + self.diode.f(-_v)
+
+	# Diode current derivative
+	def df(self, _v): 
+
+		return self.diode.df(_v) + self.diode.df(-_v)
+
+	# Diode capacitance equation
+	def c(self, _v):
+
+		return self.diode.c(_v) + self.diode.c(-_v)
+
+	# Diode capacitance derivative
+	def dc(self, _v): 
+
+		return self.diode.dc(_v) + self.diode.dc(-_v)
+
+
+# Class to represent a cross diode
+class vdp_conductance:
+
+	def __init__(self): 
+
+		self.name = "VDP Conductance"
+
+	# Diode current equation
+	def f(self, _v):
+
+		return np.power(_v, 3.0) / 3.0 - _v
+
+	def df(self, _v):
+
+		return np.power(_v, 2.0) - 1
+
+	def c(self, _v):
+
+		return 0.0
+
+	def dc(self, _v):
+
+		return 0.0

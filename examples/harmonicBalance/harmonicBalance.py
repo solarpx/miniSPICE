@@ -36,172 +36,203 @@ from minispice.Converter import *
 # Import DFT class
 from minispice.signalTools import DiscreteFourierTransform 
 
-# Class to simulate diode resistor circuit using the harmonic balance method
+# This class implements the harmonic balance method for solving the large 
+# signal response for circuits containing nonlinear elements connected to 
+# an arbitrary source impedance.
 class harmonicBalance:
 
 	# Initialization vector, frequency, convergence
-	def __init__(self, amplitude = 1.0, freq = 1e9, order = 20):
+	def __init__( self, config, nonlinear ):
 
-		# Initialize DFT object for frequency
-		self.DFT = DiscreteFourierTransform( freq, order )
+		# Store configuration variables
+		self.ampl = config["amplitude"] 
+		self.freq = config["frequency"]
+		self.order = config["order"]
 
-		# Set harmonic order
-		self.order = order
-		self.freq  = freq
+		# Solver configuration variables
+		self.epsilon = config["epsilon"]
+		self.maxiter = config["maxiter"]
+		self.converge = config["converge"]
 
-		# Initialize component models
-		self.diode  = componentModels.diode()
+		# Initialize DFT object for frequency analysis
+		self.DFT = DiscreteFourierTransform()
+
+		# Calculate transform matrices
+		self.Transform = self.DFT.Transform(self.freq, self.order)
+
+		# Initialize nonlinear component model(s)
+		self.nonlinear = nonlinear
 
 		# Generate source and initial conditions
-		self.generate_source(amplitude)
+		self.source = self.source()
 
-	def generate_source(self, amplitude):
+	# Source dual (freq domain): [0.0, 1.0i, 0.0, 0.0 ... ]
+	def source(self):
 		
-		# Set up a sin wave voltage source in freq domian [0.0, 1.0, 0.0, 0.0 ... ]
-		_source = [ complex(0, -1.0*amplitude) if _ == 1 else complex(0, 0) for _ in range(self.order) ]
+		_source = [ complex(0, -1.0 * self.ampl) if _ == 1 else complex(0, 0) for _ in range(self.order) ]
 
-		self.source = self.DFT.dual( _source, self.freq, domain="freq")
+		return self.DFT.Dual( _source, self.Transform, domain="freq")
 
-	def initialize(self):
+	# Signal dual (freq domain): [0.0, 0.0, 0.0, 0.0 ... ]
+	def signal(self):
 		
-		# Create test vector to initialize the harmonic balance
-		_V = [ complex(0.0) for _ in range(self.order) ]
+		_signal = [ complex(0.0) for _ in range(self.order) ]
 		
-		return self.DFT.dual(_V , self.freq, domain="freq")
+		return self.DFT.Dual( _signal, self.Transform, domain="freq")
 
-	def solve(self, epsilon = 0.01, conv = 1e-4, max_iterations = 1e3):	
-
-		# Everything up to here is the linear network
+	# Harmonic balance solver
+	def solve( self, source_impedance ):	
 
 		# Linear admittance matrices
-		Y11 = self.DFT.zeros()
-		Y12 = self.DFT.zeros()
+		Y11 = self.Transform.zeros()
+		Y12 = self.Transform.zeros()
 
 		# Diagonal matrix of harmonics
-		OMEGA = self.DFT.zeros()
+		iOMEGA = self.Transform.zeros()
 
 		# Define source admittance
-		G = 1./50.
+		G = 1./source_impedance
 
 		for i in range( self.order ):
 		
 			for j in range( self.order ):
 		
-				Y11[i][j] = complex( 1.0*G) if i == j else complex(0.0)	   
+				Y11[i][j] = complex( 1.0 * G) if i == j else complex(0.0)	   
 
-				Y12[i][j] = complex(-1.0*G) if i == j else complex(0.0)	   
+				Y12[i][j] = complex(-1.0 * G) if i == j else complex(0.0)	   
 
-				OMEGA[i][j] = complex(0.0,i * 2 * np.pi * self.freq) if i == j else complex(0.0) 
-
+				iOMEGA[i][j] = complex( 0.0, self.Transform.get_omega(i) ) if i == j else complex(0.0) 
 
 		# Everything after here iterates the nonlinearity
-		self.V = self.initialize()
+		self.signal = self.signal()
+
 
 		# Convergence comparison
-		self.prev = self.source
 		self.step = 0
 
 		# Iteration loop
 		while True:
 			
-			# Calculate the nonlinear signal (time domain)			
-			_Fv = [ self.diode.f(v) for v in self.V.time ]
+			# 1) Calculate the nonlinear signal (time domain)			
+			_Fv = [ self.nonlinear.f(v) for v in self.signal.time ]
 
-			Fv = self.DFT.dual(_Fv, self.freq, "time")
+			Fv = self.DFT.Dual(_Fv, self.Transform, "time")
 
-			# Calculate the error function (frequency domain)
-			_ef  = np.dot(Y11, self.V.freq) + np.dot(Y12, self.source.freq) + Fv.freq
+			# 2) Check if harmonics are balanced (frequency domain)
+			_ef  = np.dot(Y12, self.source.freq) + np.dot(Y11, self.signal.freq) + Fv.freq
 			
-			ef = self.DFT.dual(_ef, self.freq, "freq")
+			ef = self.DFT.Dual(_ef, self.Transform, "freq")
 
-			# Calculate delta
-			# delta = np.sum( ( self.prev.time.real - self.V.time.real )**2 ) / self.order
-			delta = sum( ef.time.real**2 ) / self.order
-			
+			# Calculate convergence criteria 
+			delta = ( sum( np.abs(ef.time.real) ) / self.order )
+
 			# Print convergence condition
 			if ( self.step % 20 ) == 0:
 	
 				print("Conv: %s"%delta)
 
 			# Stop on max_iterations
-			if ( self.step ) > max_iterations:
+			if ( self.step ) > self.maxiter:
 
 				print( "Maximum number of iterations %s", self.step)
 
-				return self.source, self.V				
+				return self.source, self.signal				
 
 			# If convergence criteria is met stop iteration
-			if sum( ef.time.real**2 ) / self.order < conv:
+			if ( delta ) < self.converge:
 
-				return self.source, self.V
+				return self.source, self.signal
 
 			# Otherwise calculate the Jacobian and iterate 
 			else:   
 
 				# Conductance and capacitance terms
-				dG = self.DFT.zeros()
-				dC = self.DFT.zeros()
+				dG = self.Transform.zeros()
+				dC = self.Transform.zeros()
 
 				for i in range( self.order ):
 
 					for j in range( self.order ):
 
-						## Resistive term in Jacobian
-						dG[i][j] = complex( self.diode.df( self.V.time[i] ) ) if i == j else complex(0.0)
+						# Resistive term in Jacobian (time domain)
+						dG[i][j] = complex( self.nonlinear.df( self.signal.time[i] ) ) if i == j else complex(0.0)
 
-						## Capacitive term in Jacobian
-						dC[i][j] = complex( self.diode.c( self.V.time[i] ) ) if i == j else complex(0.0)
+						# Capacitive term in Jacobian (time domain)
+						dC[i][j] = complex( self.nonlinear.c( self.signal.time[i] ) ) if i == j else complex(0.0)
 
 
 				# Jacobian: Resistive subterm
-				JR = np.dot( self.DFT.dft, np.dot(dG, self.DFT.idft) ) # [F][G][F^-1]
+				JR = np.dot( self.Transform.get_dft(), np.dot(dG, self.Transform.get_idft()) ) # [F][G][F^-1]
 
 				# Jacobian: Capacitive subterm
-				JC = np.dot( self.DFT.dft, np.dot(dC, self.DFT.idft) ) # [F][C][F^-1]
+				JC = np.dot( self.Transform.get_dft(), np.dot(dC, self.Transform.get_idft()) ) # [F][C][F^-1]
 
 				# Jacobian: Total
-				J = Y11 + JR + np.dot(OMEGA, JC)
+				J = Y11 + JR + np.dot(iOMEGA, JC)
 
 				# Invert this matrix and multiply it by the error vector
 				# to obtain change in voltage (frequency domain).
 				_dV = np.dot( la.inv(J), ef.freq )
 
-				# Cache previous value of V
-				self.prev  = self.V
-
 				## Add to original vector V and calculate its dual.
-				self.V = self.DFT.dual(self.V.freq - epsilon * _dV, self.freq, "freq")
+				self.signal = self.DFT.Dual(self.signal.freq - self.epsilon * _dV, self.Transform, "freq")
 			
 				# Increment iteration step counter
 				self.step += 1
 
+# Main program
 if __name__ == "__main__":
 	
 	# Initialize harmonic balance object
-	HB = harmonicBalance( amplitude = 1.0, freq = 1e8, order = 41 )
+	config = {
+		"amplitude" : 1.2,
+		"frequency" : 5.0e9,
+		"order"		: 64,
+		"epsilon"	: 0.001,
+		"converge"	: 1e-9,
+		"maxiter"	: 8192
+	}
 
 	# Run the simulation
-	Vsource, Vdiode = HB.solve( epsilon = 0.01, conv = 1e-5, max_iterations = 2048 )
+	HB = harmonicBalance(config, componentModels.diode() )
 
-	# Plot Results
+	Vsource, Vsignal = HB.solve(source_impedance = 10.0)
+
+	# Figure 1: Waveform
 	fig = plt.figure(1)
 	ax0 = plt.subplot(111)
-	ax0.set_title("Diode Resistor Circuit: Waveform")
-	ax0.set_xlabel("Time Step (n)")
+	ax0.set_title("%s - Resistor Circuit (Waveform)"%HB.nonlinear.name )
+	ax0.set_xlabel("Time (s)")
 	ax0.set_ylabel("Voltage (V)")
-	h0, = ax0.plot( Vsource.time.real )
-	h1, = ax0.plot( Vdiode.time.real )
+
+	h0, = ax0.plot( np.real(Vsource.tau), np.real(Vsource.time) )
+	h1, = ax0.plot( np.real(Vsignal.tau), np.real(Vsignal.time) )
+
 	ax0.legend([h0, h1],["Input waveform", "Diode response"])
 
+	# Figure 2: Harmonic composition
 	fig = plt.figure(2)
 	ax0 = plt.subplot(111)
-	ax0.set_title("Diode Resistor Circuit: Nonlinear Elements")
-	ax0.set_xlabel("Time Step $(n)$")
-	ax0.set_ylabel("Diode Conductance Waveform $G$")
-	h0, = ax0.semilogy( [ HB.diode.df(_) for _ in Vdiode.time.real], color = "tab:blue" )
+	ax0.set_title("%s - Resistor Circuit (Harmonics)"%HB.nonlinear.name )
+	ax0.set_xlabel("Harmonic (n)")
+	ax0.set_ylabel("Coefficient Amplitude |c|")
+
+	h0, = ax0.semilogy( np.abs(Vsignal.freq), 'o' )
+
+	# Figure 3: Nonlinear conductance and capacitance
+	fig = plt.figure(3)
+	ax0 = plt.subplot(111)
+	ax0.set_title("%s - Resistor Circuit (Nonlinear Elements)"%HB.nonlinear.name )
+	ax0.set_xlabel("Time $(s)$")
+	ax0.set_ylabel("Conductance $(G)$")
 	ax1 = ax0.twinx()
-	ax1.set_ylabel("Diode Capacitance Waveform $C$")
-	h1, = ax1.plot( [ HB.diode.c(_) for _ in Vdiode.time.real], color = "tab:orange" )
+	ax1.set_ylabel("Capacitance $(C)$")
+	
+	Gnl = [ HB.nonlinear.df(_) for _ in np.real(Vsignal.time) ]
+	Cnl = [ HB.nonlinear.c(_)  for _ in np.real(Vsignal.time) ]
+
+	h0, = ax0.semilogy(np.real(Vsource.tau), Gnl , color = "tab:blue" )
+	h1, = ax1.plot(np.real(Vsource.tau), Cnl , color = "tab:orange" )
 
 	ax0.legend([h0, h1],["Conductance", "Capacitance"])
 
