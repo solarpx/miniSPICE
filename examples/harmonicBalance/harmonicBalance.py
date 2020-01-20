@@ -34,7 +34,7 @@ from minispice.nonlinear import componentModels
 from minispice.Converter import *
 
 # Import DFT class
-from minispice.signalTools import DiscreteFourierTransform 
+import minispice.discreteFourierTransform as DFT
 
 # This class implements the harmonic balance method for solving the large 
 # signal response for circuits containing nonlinear elements connected to 
@@ -54,11 +54,8 @@ class harmonicBalance:
 		self.maxiter = config["maxiter"]
 		self.converge = config["converge"]
 
-		# Initialize DFT object for frequency analysis
-		self.DFT = DiscreteFourierTransform()
-
 		# Calculate transform matrices
-		self.Transform = self.DFT.Transform(self.freq, self.order)
+		self.Transform = DFT.Transform(self.freq, self.order)
 
 		# Initialize nonlinear component model(s)
 		self.nonlinear = nonlinear
@@ -71,14 +68,14 @@ class harmonicBalance:
 		
 		_source = [ complex(0, -1.0 * self.ampl) if _ == 1 else complex(0, 0) for _ in range(self.order) ]
 
-		return self.DFT.Dual( _source, self.Transform, domain="freq")
+		return DFT.Dual( _source, self.Transform, domain="freq")
 
 	# Signal dual (freq domain): [0.0, 0.0, 0.0, 0.0 ... ]
 	def signal(self):
 		
 		_signal = [ complex(0.0) for _ in range(self.order) ]
 		
-		return self.DFT.Dual( _signal, self.Transform, domain="freq")
+		return DFT.Dual( _signal, self.Transform, domain="freq")
 
 	# Harmonic balance solver
 	def solve( self, source_impedance ):	
@@ -116,12 +113,12 @@ class harmonicBalance:
 			# 1) Calculate the nonlinear signal (time domain)			
 			_Fv = [ self.nonlinear.f(v) for v in self.signal.time ]
 
-			Fv = self.DFT.Dual(_Fv, self.Transform, "time")
+			Fv = DFT.Dual(_Fv, self.Transform, "time")
 
 			# 2) Check if harmonics are balanced (frequency domain)
 			_ef  = np.dot(Y12, self.source.freq) + np.dot(Y11, self.signal.freq) + Fv.freq
 			
-			ef = self.DFT.Dual(_ef, self.Transform, "freq")
+			ef = DFT.Dual(_ef, self.Transform, "freq")
 
 			# Calculate convergence criteria 
 			delta = ( sum( np.abs(ef.time.real) ) / self.order )
@@ -175,7 +172,7 @@ class harmonicBalance:
 				_dV = np.dot( la.inv(J), ef.freq )
 
 				## Add to original vector V and calculate its dual.
-				self.signal = self.DFT.Dual(self.signal.freq - self.epsilon * _dV, self.Transform, "freq")
+				self.signal = DFT.Dual(self.signal.freq - self.epsilon * _dV, self.Transform, "freq")
 			
 				# Increment iteration step counter
 				self.step += 1
@@ -237,4 +234,3 @@ if __name__ == "__main__":
 	ax0.legend([h0, h1],["Conductance", "Capacitance"])
 
 	plt.show()
-
